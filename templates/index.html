@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>오늘 뭐 먹지?</title>
+
+    <style>
+        body {
+            text-align: center;
+            font-family: sans-serif;
+            padding-top: 40px;
+        }
+
+        h1 {
+            font-size: 48px;
+        }
+
+        #foodImage {
+            width: 90%;
+            max-width: 600px;
+            border-radius: 20px;
+        }
+
+        p {
+            font-size: 32px;
+            margin: 20px 0;
+        }
+
+        #drawButton {
+            display: inline-block;
+            font-size: 28px;
+            padding: 16px 40px;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            text-decoration: none;
+            border-radius: 16px;
+            cursor: pointer;
+        }
+
+        /* 뽑을 때 흔들리는 효과 */
+        .shake {
+            animation: shake 0.1s infinite;
+        }
+
+        @keyframes shake {
+            0% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+            100% { transform: rotate(-5deg); }
+        }
+
+        /* 당첨될 때 커지는 효과 */
+        .result {
+            animation: pop 0.5s;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1 id="foodName">
+        {% if food %}오늘의 메뉴는 {{ food.name }}!{% else %}오늘 뭐 먹지?{% endif %}
+    </h1>
+
+    <img
+        id="foodImage"
+        src="{% if food %}{{ food.image }}{% else %}https://cdn-icons-png.flaticon.com/512/5726/5726775.png{% endif %}"
+        alt="음식 이미지"
+    >
+
+    <p id="foodComment">
+        {% if food %}{{ food.comment }}{% else %}버튼을 눌러 메뉴를 뽑아보세요!{% endif %}
+    </p>
+
+    <button id="drawButton" onclick="drawFood()">
+        🎲 메뉴 뽑기
+    </button>
+
+
+<script>
+function drawFood() {
+    const image = document.getElementById("foodImage");
+    const name = document.getElementById("foodName");
+    const comment = document.getElementById("foodComment");
+    const button = document.getElementById("drawButton");
+
+    // 현재 음식 이름 추출 (초기 상태 처리)
+    let currentFood = name.innerText
+        .replace("오늘의 메뉴는 ", "")
+        .replace("!", "")
+        .replace("오늘 뭐 먹지?", "")
+        .trim();
+
+    // 버튼 잠금 및 흔들기 애니메이션 시작
+    button.disabled = true;
+    image.classList.add("shake");
+
+    setTimeout(function() {
+        fetch("/draw?current=" + encodeURIComponent(currentFood))
+            .then(response => response.json())
+            .then(food => {
+
+                // 받아온 JSON 정보로 화면 변경
+                name.innerText = "오늘의 메뉴는 " + food.name + "!";
+                image.src = food.image;
+                image.alt = food.name;
+                comment.innerText = food.comment;
+
+                // 흔들기 멈춤
+                image.classList.remove("shake");
+
+                // 커지는 이펙트 실행
+                name.classList.remove("result");
+                void name.offsetWidth;
+                name.classList.add("result");
+
+                // 버튼 문구 '다시 뽑기'로 변경 및 활성화
+                button.innerText = "🎲 다시 뽑기";
+                button.disabled = false;
+            })
+            .catch(error => {
+                console.error("오류 발생:", error);
+                image.classList.remove("shake");
+                button.disabled = false;
+            });
+
+    }, 1000);
+}
+</script>
+
+</body>
+</html>
